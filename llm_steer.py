@@ -153,8 +153,8 @@ class Steer:
 
         #inject bos_token
         #This can be reverted with exclude_bos_token=True
-        if tokenizer.bos_token is not None and text_tokens[0] != tokenizer.encode(tokenizer.bos_token)[-1]:
-            text_tokens.insert(0, tokenizer.encode(tokenizer.bos_token)[-1])
+        if self.tokenizer.bos_token is not None and text_tokens[0] != self.tokenizer.encode(self.tokenizer.bos_token)[-1]:
+            text_tokens.insert(0, self.tokenizer.encode(self.tokenizer.bos_token)[-1])
         
         if (
             exclude_bos_token
