@@ -169,7 +169,7 @@ class Steer:
         )
 
         if try_keep_nr is None:
-            try_keep_nr = 0 if tokenizer.bos_token is None else 1
+            try_keep_nr = 0 if self.tokenizer.bos_token is None else 1
 
         self._add_steer_vector(
             layer_idx,
