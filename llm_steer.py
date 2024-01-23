@@ -127,12 +127,26 @@ class Steer:
         return _steer_vector_forward_inner
 
     def get_all(self):
+        """
+        Get all the steering vectors data that are applied on the model.
+        Can be used for replicating in the future the state.
+        """
         return [{'layer_idx': val.layer_idx, 'text': x.text, 'coeff': x.coeff, 'try_keep_nr': x.try_keep_nr, 'exclude_bos_token': x.exclude_bos_token} for val in self.steers.values() for x in val.steer_vectors]
 
     def reset(self, layer_idx: int):
+        """
+        Remove the steering vectors on a particular layer.      
+
+        Args:
+            layer_idx (int): The layer index that will have the steering vectors removed.
+        """
         self._set_forward_fn(ActivationMode.ORIGINAL, layer_idx)
 
     def reset_all(self):
+        """
+        Remove all steering vectors that were applied on the model.
+        Gets the model to initial state, before wrapping it in the Steer class and using add(). 
+        """
         [self.reset(idx) for idx in range(len(self.model._modules["model"].layers))]
 
     def add(
@@ -143,6 +157,19 @@ class Steer:
         try_keep_nr: int = None,
         exclude_bos_token: bool = False,
     ):
+        """
+        Add a steering vector.
+        Args:
+            layer_idx (int): The layer index to apply the steering vector on. Usually is toward the end.
+            coeff: The steerging vectors coefficient. Usually is below 1. Can also be negative.
+            text: The steering vector text.
+            try_keep_nr: This is used in advanced usage and determines the number of rows of the initial
+                matrix to be kept. The param is used for expetimenting. Leave to default value for best usage.
+            exclude_bos_token: This is used in advanced usage and determines if the beginning of a sentence
+                (bos) token should be removed. By default, the code ensures the tokens used for generating
+                start with the bos token. The param is used for expetimenting. Leave to default value for best usage.
+        """
+        
         assert layer_idx >= 0 and layer_idx < len(
             self.model._modules["model"].layers
         ), f"""Current model has {len(self.model._modules['model'].layers)} layers, 
