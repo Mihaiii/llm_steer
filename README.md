@@ -32,9 +32,9 @@ The so-called "advanced usage" involves changing the default values of 2 paramet
 More info will be provided in a separate file.
 
 ## Q / A
-Q: What's the difference between llm-steer and mentioning what you want in the system prompt?
+Q: What's the difference between llm_steer and mentioning what you want in the system prompt?
 
-A: I see llm-steer as an enhancer. It can be used together with the system prompt.
+A: I see llm_steer as an enhancer. It can be used together with the system prompt.
 
 <br/>
 Q: How to determine the best parameters to be used?
@@ -45,7 +45,7 @@ A: I don't have a method; it's all trial and error. I recommend starting with a 
 Q: What models are supported?
 
 A: I tested it on multiple architectures, including LLaMa, Mistral, Phi, StableLM.
-Keep in mind that llm-steer is meant to be used together with HuggingFace's transformers library, so it won't work on GGUF, for example.
+Keep in mind that llm_steer is meant to be used together with HuggingFace's transformers library, so it won't work on GGUF, for example.
 
 <br/>
 Q: I applied steering vectors, but the LLM outputs gibberish. What should I do?
