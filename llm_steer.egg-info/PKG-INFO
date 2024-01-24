@@ -1,8 +1,0 @@
-Metadata-Version: 2.1
-Name: llm-steer
-Version: 0.0.1
-Summary: Steer LLM responses towards a certain topic/subject and enhance response capabilities using activation engineering by adding steer vectors
-Home-page: https://github.com/Mihaiii/llm_steer
-Author: Mihai Chirculescu
-Author-email: apropodemine@gmail.com
-License-File: LICENSE
