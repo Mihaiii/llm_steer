@@ -3,7 +3,8 @@ A Python module to steer LLM responses towards a certain topic/subject and to en
 A practical tool for using activation engineering by adding steer vectors to different layers of a Large Language Model (LLM).
 It should be used along with the transformers library.
 ## Demo
-Google Colab demo: TO BE COMPLETED
+Google Colab demo: https://colab.research.google.com/github/Mihaiii/llm_steer/blob/main/demo/llm_steer_demo.ipynb
+
 ## Basic usage
 Install it: `pip install llm_steer`
 Then use:
@@ -29,6 +30,7 @@ steered_model.reset_all()
 The so-called "advanced usage" involves changing the default values of 2 parameters ("try_keep_nr" and "exclude_bos_token"), which, from my experiments - almost always leads to the LLM outputting gibberish. In the very few cases when the LLM outputs text that does make sense, **the basic usage provides higher quality outputs**.
 
 More info will be provided in a separate file.
+
 ## Q / A
 Q: What's the difference between llm-steer and mentioning the response style in the system prompt?
 A: First of all, I see llm-steer as an enhancer. It can be used together with the system prompt.
@@ -38,14 +40,14 @@ A: I don't have a method; it's all trial and error. I recommend starting with a 
 
 Q: What models are supported?
 A: I tested it on multiple architectures, including LLaMa, Mistral, Phi, StableLM.
-Keep in mind that llm-steer is meant to be used together with HuggingFace's transformers library, so it won't work on GGPT, for example.
+Keep in mind that llm-steer is meant to be used together with HuggingFace's transformers library, so it won't work on GGUF, for example.
 
 Q: I applied steering vectors, but the LLM outputs gibberish. What should I do?
 A: Try a lower coeff value or another layer.
 
 Q: Can I add multiple steering vectors on the same layer? Can I add the same steering vector on multiple layers? Can I add steering vectors with negative coefficients?
 A: Yes, and please do. llm_steer is built for experimenting.
-See the Colab for an example: TO BE FILLED IN
+See the Colab for examples: https://colab.research.google.com/github/Mihaiii/llm_steer/blob/main/demo/llm_steer_demo.ipynb
 
 Q: Can I use steer vectors to enhance role-play characteristics (e.g., personas that are more funny or cocky)?
 A: I believe this is possible, but I haven't had good results yet. I'm considering doing some more intensive testing and I might write a new notebook for it.
