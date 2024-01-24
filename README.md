@@ -32,27 +32,40 @@ The so-called "advanced usage" involves changing the default values of 2 paramet
 More info will be provided in a separate file.
 
 ## Q / A
-Q: What's the difference between llm-steer and mentioning the response style in the system prompt?
-A: First of all, I see llm-steer as an enhancer. It can be used together with the system prompt.
+Q: What's the difference between llm-steer and mentioning what you want in the system prompt?
+
+A: I see llm-steer as an enhancer. It can be used together with the system prompt.
+
 
 Q: How to determine the best parameters to be used?
+
 A: I don't have a method; it's all trial and error. I recommend starting with a small coefficient and then slowly increase it.
 
+
 Q: What models are supported?
+
 A: I tested it on multiple architectures, including LLaMa, Mistral, Phi, StableLM.
 Keep in mind that llm-steer is meant to be used together with HuggingFace's transformers library, so it won't work on GGUF, for example.
 
+
 Q: I applied steering vectors, but the LLM outputs gibberish. What should I do?
+
 A: Try a lower coeff value or another layer.
 
+
 Q: Can I add multiple steering vectors on the same layer? Can I add the same steering vector on multiple layers? Can I add steering vectors with negative coefficients?
+
 A: Yes, and please do. llm_steer is built for experimenting.
 See the Colab for examples: https://colab.research.google.com/github/Mihaiii/llm_steer/blob/main/demo/llm_steer_demo.ipynb
 
+
 Q: Can I use steer vectors to enhance role-play characteristics (e.g., personas that are more funny or cocky)?
+
 A: I believe this is possible, but I haven't had good results yet. I'm considering doing some more intensive testing and I might write a new notebook for it.
 
+
 Q: Can I use negative steering vectors to force it not to say "As an AI language model"?
+
 A: Yes.
 
 ## Credits / Thanks
