@@ -170,7 +170,7 @@ class Steer:
                 matrix to be kept. The param is used for expetimenting. Leave to default value for best usage.
             exclude_bos_token: This is used in advanced usage and determines if the beginning of a sentence
                 (bos) token should be removed. By default, the code ensures the tokens used for generating
-                start with the bos token. The param is used for expetimenting. Leave to default value for best usage.
+                start with the bos token. The param is used for experimenting. Leave to default value for best usage.
             steering_method: A function that can be used to determine the steering method/formula. For more details, see https://github.com/Mihaiii/llm_steer/pull/2
         """
         assert layer_idx >= 0 and layer_idx < len(
