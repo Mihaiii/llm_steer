@@ -227,7 +227,8 @@ class Steer:
 
     def _capture_tensor(self, layer_idx: int, tokens: Tensor):
         self._set_forward_fn(ActivationMode.CAPTURE, layer_idx)
-        self.model(tokens)
+        with torch.inference_mode():
+            self.model(tokens)
         result = self.captured_tensor
         print(f"captured tensor: {result}")
         return result
