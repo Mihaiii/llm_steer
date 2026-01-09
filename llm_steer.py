@@ -1,7 +1,7 @@
 from copy import deepcopy
 from transformers import PreTrainedModel, PreTrainedTokenizerBase
 from dataclasses import dataclass
-from typing import List, Callable
+from typing import List, Callable, Optional
 from torch import Tensor, torch
 from enum import Enum
 
@@ -17,9 +17,8 @@ class SteerElement:
     text: str
     tensor: Tensor
     coeff: float
-    try_keep_nr: int
-    exclude_bos_token: bool = False
     steering_method: Callable = None
+    coeff_schedule: Optional[Callable] = None
 
 
 @dataclass
@@ -27,6 +26,7 @@ class SteerData:
     orig_forward_fn: torch.nn.Module.forward
     layer_idx: int
     steer_vectors: List[SteerElement]
+    step: int = 0
 
 
 class Steer:
@@ -41,6 +41,7 @@ class Steer:
         self.model = deepcopy(model) if copyModel else model
         self.tokenizer = tokenizer
         self.device = torch.device(next(model.parameters()).device)
+        self._layer_norm_eps = self._resolve_layer_norm_eps()
 
     def _set_forward_fn(self, option: ActivationMode, layer_idx: int):
         if option == ActivationMode.ORIGINAL:
@@ -60,9 +61,9 @@ class Steer:
                     steer_vectors=[],
                 ),
             )
-            self.model._modules["model"].layers[
-                layer_idx
-            ].forward = self._store_activations_forward(layer_idx)
+            self.model._modules["model"].layers[layer_idx].forward = (
+                self._store_activations_forward(layer_idx)
+            )
         elif option == ActivationMode.STEER:
             self.steers.setdefault(
                 layer_idx,
@@ -74,9 +75,33 @@ class Steer:
                     steer_vectors=[],
                 ),
             )
-            self.model._modules["model"].layers[
-                layer_idx
-            ].forward = self._steer_vector_forward(layer_idx)
+            self.model._modules["model"].layers[layer_idx].forward = (
+                self._steer_vector_forward(layer_idx)
+            )
+
+    @staticmethod
+    def _rms(x: Tensor, eps: float = 1e-6) -> Tensor:
+        # Use float32 for stability regardless of model dtype.
+        return torch.sqrt(torch.mean(x.float() ** 2, dim=-1, keepdim=True) + eps)
+
+    @staticmethod
+    def _layer_norm(x: Tensor, eps: float) -> Tensor:
+        x_float = x.float()
+        mean = x_float.mean(dim=-1, keepdim=True)
+        var = x_float.var(dim=-1, unbiased=False, keepdim=True)
+        return (x_float - mean) / torch.sqrt(var + eps)
+
+    def _resolve_layer_norm_eps(self) -> Optional[float]:
+        for module in self.model.modules():
+            if isinstance(module, torch.nn.LayerNorm):
+                return float(module.eps)
+        return None
+
+    def _normalize_direction(self, direction: Tensor) -> Tensor:
+        if self._layer_norm_eps is not None:
+            return self._layer_norm(direction, eps=self._layer_norm_eps)
+        direction_rms = self._rms(direction)
+        return direction / (direction_rms + 1e-6)
 
     def _store_activations_forward(self, layer_idx: int):
         def _store_activations_forward_inner(*args, **kwargds):
@@ -89,42 +114,35 @@ class Steer:
 
     def _steer_vector_forward(self, layer_idx: int):
         def _steer_vector_forward_inner(*args, **kwargds):
+            steer_state = self.steers[layer_idx]
+            step = steer_state.step
             for elem in self.steers[layer_idx].steer_vectors:
-                if elem.tensor.size()[1] <= elem.try_keep_nr:
-                    extraText = ""
-                    if elem.tensor.size()[1] == elem.try_keep_nr:
-                        extraText = """ In case you're using exclude_bos_token=True, 
-                        you could also consider setting it to False and retrying."""
-                    raise Exception(
-                        f"""Invalid try_keep_nr value. Current value is {elem.try_keep_nr}, 
-                    but it has to be less than the number of text tokens (in this case {elem.tensor.size()[1]}) on layer index {layer_idx}. 
-                    You could set a lower value for try_keep_nr or provide longer text for steering. {extraText}"""
-                    )
-
                 if elem.steering_method is not None:
-                    delta = elem.steering_method(elem.tensor, elem.coeff, elem.try_keep_nr)
+                    delta = elem.steering_method(elem, step, layer_idx)
                 else:
-                    delta = torch.mean(
-                        elem.coeff * elem.tensor[:, elem.try_keep_nr :, :],
+                    direction = torch.mean(
+                        elem.tensor,
                         dim=1,
                         keepdim=True,
                     )
-
+                    direction = self._normalize_direction(direction)
+                    delta = elem.coeff * direction
+                    if elem.coeff_schedule is not None:
+                        schedule_multiplier = elem.coeff_schedule(step)
+                        delta = delta * float(schedule_multiplier)
                 if "hidden_states" in kwargds:
-                    if kwargds["hidden_states"].size()[1] == 1:
-                        kwargds["hidden_states"][:, -1:, :] += delta
-                    else:
-                        kwargds["hidden_states"][:, elem.try_keep_nr :, :] += delta
+                    delta = delta * self._rms(kwargds["hidden_states"][:, -1:, :])
+                    kwargds["hidden_states"][:, :, :] += delta.to(
+                        kwargds["hidden_states"].dtype
+                    )
                 elif isinstance(args[0], Tensor):
-                    if args[0].size()[1] == 1:
-                        args[0][:, -1:, :] += delta
-                    else:
-                        args[0][:, elem.try_keep_nr :, :] += delta
+                    delta = delta * self._rms(args[0][:, -1:, :])
+                    args[0][:, :, :] += delta.to(args[0].dtype)
                 else:
                     raise Exception(
                         "The model is not currently supported. Please open an issue in the official GitHub repository."
                     )
-
+            steer_state.step = step + 1
             return self.steers[layer_idx].orig_forward_fn(*args, **kwargds)
 
         return _steer_vector_forward_inner
@@ -134,11 +152,24 @@ class Steer:
         Get all the steering vectors data that are applied on the model.
         Can be used for replicating in the future the state.
         """
-        return [{'layer_idx': val.layer_idx, 'text': x.text, 'coeff': x.coeff, 'try_keep_nr': x.try_keep_nr, 'exclude_bos_token': x.exclude_bos_token} for val in self.steers.values() for x in val.steer_vectors]
+        return [
+            {
+                "layer_idx": val.layer_idx,
+                "text": x.text,
+                "coeff": x.coeff,
+                "coeff_schedule": (
+                    x.coeff_schedule.to_dict()
+                    if hasattr(x.coeff_schedule, "to_dict")
+                    else None
+                ),
+            }
+            for val in self.steers.values()
+            for x in val.steer_vectors
+        ]
 
     def reset(self, layer_idx: int):
         """
-        Remove the steering vectors on a particular layer.      
+        Remove the steering vectors on a particular layer.
         Args:
             layer_idx (int): The layer index that will have the steering vectors removed.
         """
@@ -147,7 +178,7 @@ class Steer:
     def reset_all(self):
         """
         Remove all steering vectors that were applied on the model.
-        Gets the model to initial state, before wrapping it in the Steer class and using add(). 
+        Gets the model to initial state, before wrapping it in the Steer class and using add().
         """
         [self.reset(idx) for idx in range(len(self.model._modules["model"].layers))]
 
@@ -156,9 +187,8 @@ class Steer:
         layer_idx: int,
         coeff: float,
         text: str,
-        try_keep_nr: int = None,
-        exclude_bos_token: bool = False,
         steering_method: Callable = None,
+        coeff_schedule: Optional[Callable] = None,
     ):
         """
         Add a steering vector.
@@ -166,40 +196,23 @@ class Steer:
             layer_idx (int): The layer index to apply the steering vector on. Usually is toward the end.
             coeff: The steerging vectors coefficient. Usually is below 1. Can also be negative.
             text: The steering vector text.
-            try_keep_nr: This is used in advanced usage and determines the number of rows of the initial
-                matrix to be kept. The param is used for expetimenting. Leave to default value for best usage.
-            exclude_bos_token: This is used in advanced usage and determines if the beginning of a sentence
-                (bos) token should be removed. By default, the code ensures the tokens used for generating
-                start with the bos token. The param is used for experimenting. Leave to default value for best usage.
             steering_method: A function that can be used to determine the steering method/formula. For more details, see https://github.com/Mihaiii/llm_steer/pull/2
+            coeff_schedule: Optional callable that returns a multiplier per step;
+                effective coefficient is `coeff * coeff_schedule(step)` (step increments each time this layer runs).
         """
         assert layer_idx >= 0 and layer_idx < len(
             self.model._modules["model"].layers
         ), f"""Current model has {len(self.model._modules['model'].layers)} layers, 
         but the provided layer_idx is not within 
         [0, {len(self.model._modules['model'].layers) - 1}] interval."""
-        
-        text_tokens = self.tokenizer.encode(text)
 
-        #inject bos_token
-        #This can be reverted with exclude_bos_token=True
-        if self.tokenizer.bos_token is not None and text_tokens[0] != self.tokenizer.encode(self.tokenizer.bos_token)[-1]:
-            text_tokens.insert(0, self.tokenizer.encode(self.tokenizer.bos_token)[-1])
-        
-        if (
-            exclude_bos_token
-            and self.tokenizer.bos_token is not None
-        ):
-            text_tokens = text_tokens[1:]
-            
-        print(f"text tokens: {text_tokens}")
-        
+        text_tokens = self.tokenizer.encode(text, add_special_tokens=False)
+
+        # print(f"text tokens: {text_tokens}")
+
         layer_tensor = self._capture_tensor(
             layer_idx, torch.tensor(text_tokens).to(self.device).unsqueeze(0)
         )
-
-        if try_keep_nr is None:
-            try_keep_nr = 0 if self.tokenizer.bos_token is None else 1
 
         self._add_steer_vector(
             layer_idx,
@@ -207,9 +220,8 @@ class Steer:
                 text=text,
                 tensor=layer_tensor,
                 coeff=coeff,
-                try_keep_nr=try_keep_nr,
-                exclude_bos_token=exclude_bos_token,
                 steering_method=steering_method,
+                coeff_schedule=coeff_schedule,
             ),
         )
 
@@ -230,5 +242,5 @@ class Steer:
         with torch.inference_mode():
             self.model(tokens)
         result = self.captured_tensor
-        print(f"captured tensor: {result}")
+        # print(f"captured tensor: {result}")
         return result

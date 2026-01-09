@@ -26,11 +26,6 @@ Remove all steering vectors to revert to initial model:
 steered_model.reset_all()
 ```
 
-## Advanced usage
-The so-called "advanced usage" involves changing the default values of 2 parameters ("try_keep_nr" and "exclude_bos_token"), which, from my experiments - almost always leads to the LLM outputting gibberish. In the very few cases when the LLM outputs text that does make sense, **the basic usage provides higher quality outputs**.
-
-More info will be provided in a separate file.
-
 ## Q / A
 Q: What's the difference between llm_steer and mentioning what you want in the system prompt?
 
@@ -39,7 +34,7 @@ A: I see llm_steer as an enhancer. It can be used together with the system promp
 <br/>
 Q: How to determine the best parameters to be used?
 
-A: I don't have a method; it's all trial and error. I recommend starting with a small coefficient and then slowly increase it.
+A: I don't have a method; it's all trial and error. I recommend starting middle layers and with a small coefficient and then slowly increase it.
 
 <br/>
 Q: What models are supported?
@@ -61,7 +56,7 @@ See the Colab for examples: https://colab.research.google.com/github/Mihaiii/llm
 <br/>
 Q: Can I use steer vectors to enhance role-play characteristics (e.g., personas that are more funny or cocky)?
 
-A: I believe this is possible, but I haven't had good results yet. I'm considering doing some more intensive testing and I might write a new notebook for it.
+A: Yes.
 
 <br/>
 Q: Can I use negative steering vectors to force it not to say "As an AI language model"?
