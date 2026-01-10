@@ -3,8 +3,8 @@ A Python module to steer LLM responses towards a certain topic/subject and to en
 A practical tool for using activation engineering by adding steer vectors to different layers of a Large Language Model (LLM).
 It should be used along with the transformers library.
 ## Demo
-= llm_steer v1: Google Colab demo: https://colab.research.google.com/github/Mihaiii/llm_steer/blob/main/demo/llm_steer_demo.ipynb
-- llm_steer v2: https://huggingface.co/spaces/Mihaiii/llm_steer
+- llm_steer v1: https://colab.research.google.com/github/Mihaiii/llm_steer/blob/main/demo/llm_steer_demo.ipynb
+- llm_steer v2: https://mihaiii-llm-steer.hf.space/
   
 ## Basic usage
 Install it: `pip install llm_steer`
@@ -68,4 +68,5 @@ A: Yes.
 - [DL Explorers](https://www.youtube.com/@DLExplorers-lg7dt) for his video on [activation engineer](https://www.youtube.com/watch?v=J2Gx6FFEaRY&t=29s) which goes over [an article](https://www.greaterwrong.com/posts/5spBue2z2tw4JuDCx/steering-gpt-2-xl-by-adding-an-activation-vector) and [a colab he made](https://colab.research.google.com/github/githubpradeep/notebooks/blob/main/activation_engineering.ipynb). The resources mentioned in that video were the starting point of llm_steer.
 - Gary Bernhardt for his excellent [Python for programmers](https://www.executeprogram.com/courses/python-for-programmers) course. I needed a course that could help me go through the basics of Python without treating me like a dev noob (like most basic level tutorials treat their audience).
 - Andrej Karpathy for his [State of GPT](https://www.youtube.com/watch?v=bZQun8Y4L2A) video. I always wanted to make an open-source project, but there already was a repo for every idea I had. Not when it comes to tools for LLMs, though!
+
 
